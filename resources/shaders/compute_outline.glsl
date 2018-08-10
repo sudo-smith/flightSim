@@ -1,4 +1,4 @@
-﻿#version 450 core
+#version 430 core
 
 #define WORLD_POS_OFF 0
 #define MOMENTUM_OFF 1
