@@ -530,17 +530,30 @@ namespace Simulation {
 	}
 
 	void initNullData() {
-		s_flagTex_nullData = new GLint[k_width * k_height];
-		s_flagTex_nullData = { 0 };
 
+		
+		
+		
+		s_flagTex_nullData = new GLint[k_width * k_height * 2];
+		for (uint i = 0; i < (k_width * k_height * 2); i++) {
+			s_flagTex_nullData[i] = 0;
+		}
+
+		
 		s_geoTex_nullData = new GLfloat[k_estimateMaxGeoPixels * k_extimateMaxGeoPixelsRows * 4];
-		s_geoTex_nullData = { 0 };
+		for (uint i = 0; i < (k_estimateMaxGeoPixels * k_extimateMaxGeoPixelsRows * 4); i++) {
+			s_geoTex_nullData[i] = 0;
+		}
 
-		s_outlineTex_nullData = new GLfloat[k_estimateMaxGeoPixels * k_extimateMaxGeoPixelsRows * 4];
-		s_outlineTex_nullData = { 0 };
+		s_outlineTex_nullData = new GLfloat[k_estimateMaxOutlinePixels * k_estimateMaxOutlinePixelsRows * 4];
+		for (uint i = 0; i < (k_estimateMaxOutlinePixels * k_estimateMaxOutlinePixelsRows * 4); i++) {
+			s_outlineTex_nullData[i] = 0;
+		}
 
 		s_sideTex_nullData = new GLubyte[k_width * k_height * 4];
-		s_sideTex_nullData = { 0 };
+		for (uint i = 0; i < (k_width * k_height * 4); i++) {
+			s_sideTex_nullData[i] = '\0';
+		}
 	}
 
 
@@ -590,6 +603,7 @@ namespace Simulation {
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		std::cout << s_flagTex_nullData[34] << std::endl;
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_R32UI, k_width, k_height * 2, 0, GL_RED_INTEGER, GL_INT, s_flagTex_nullData);
 		uint clearcolor = 0;
 		glBindImageTexture(2, s_flagTex, 0, GL_FALSE, 0, GL_READ_WRITE, GL_R32I);
