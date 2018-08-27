@@ -23,7 +23,6 @@ extern "C" {
 #include "glm/gtc/matrix_transform.hpp"
 
 #include "Simulation.hpp"
-#include "Results.hpp"
 #include "SideView.hpp"
 #include "Model.hpp"
 #include "Program.h"
@@ -298,26 +297,6 @@ static bool setup() {
         return false;
     }
 
-    // Results Window
-    if (!Results::setup(s_resourceDir, s_mainWindow)) {
-        std::cerr << "Failed to setup results" << std::endl;
-        return false;
-    }
-    GLFWwindow * resultsWindow(Results::getWindow());
-
-    //Side view Window
-    //if (!SideView::setup(s_resourceDir, Simulation::sideTex(), s_mainWindow)) {
-    //    std::cerr << "Failed to setup results" << std::endl;
-    //    return false;
-    //}
-    //GLFWwindow * sideViewWindow(SideView::getWindow());
-
-    // Arrange windows
-    glfwSetWindowPos(s_mainWindow, 100, 100);
-    int windowWidth, windowHeight;
-    glfwGetWindowSize(s_mainWindow, &windowWidth, &windowHeight);
-    //glfwSetWindowPos(sideViewWindow, 100 + windowWidth + 10, 100);
-    glfwSetWindowPos(resultsWindow, 100, 100 + windowHeight + 40);
 
     glfwMakeContextCurrent(s_mainWindow);
     glfwFocusWindow(s_mainWindow);
@@ -327,7 +306,6 @@ static bool setup() {
 
 static void cleanup() {
     Simulation::cleanup();
-    Results::cleanup();
     glfwTerminate();
 }
 
@@ -381,8 +359,6 @@ static void update() {
             vec3 drag(Simulation::drag());
             std::cout << "angle: " << s_angleOfAttack << ", lift: " << lift.x << ", drag: " << drag.x << std::endl;
 
-            Results::submit(s_angleOfAttack, lift.x, drag.x);
-
             if (s_shouldAutoProgress) {
                 s_angleOfAttack += k_autoAngleIncrement;
                 s_angleOfAttack = std::fmod(s_angleOfAttack - k_minAngleOfAttack, k_maxAngleOfAttack - k_minAngleOfAttack) + k_minAngleOfAttack;
@@ -426,7 +402,6 @@ static void render() {
 
     // Results -------------------------------------------------------------
 
-    Results::render();
     glfwMakeContextCurrent(s_mainWindow);
 }
 
