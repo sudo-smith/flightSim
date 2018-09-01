@@ -52,8 +52,15 @@ static constexpr float k_autoAngleIncrement(7.0f); // how many degrees to change
 
 
 static std::string s_resourceDir(k_defResourceDir);
+static std::shared_ptr<Program> s_phongProg;
+
 
 static std::unique_ptr<Model> s_model;
+static mat4 s_modelMat;
+static mat3 s_normalMat;
+static vec3 s_centerOfMass; // Center of mass of the model in world space
+
+
 //all in degrees
 static float s_angleOfAttack(0.0f);
 static float s_aileronAngle(0.0f);
@@ -69,7 +76,7 @@ static std::shared_ptr<Program> s_texProg;
 static uint s_screenVAO;
 static uint s_screenVBO;
 
-
+static constexpr int k_width(720), k_height(480);
 
 static void printUsage() {
     std::cout << "Usage: liftdrag [resource_directory]" << std::endl;
@@ -128,6 +135,12 @@ static void changeElevatorAngle(float deltaAngle) {
     s_model->subModel("ElevatorR01")->localTransform(modelMat, normalMat);
 
     std::cout << "Elevator angle set to " << s_elevatorAngle << std::endl;
+}
+
+static void set(const mat4 & modelMat, const mat3 & normalMat, const vec3 & centerOfMass) {
+    s_modelMat = modelMat;
+    s_normalMat = normalMat;
+    s_centerOfMass = centerOfMass;
 }
 
 static void setSimulation(float angleOfAttack, bool debug) {
@@ -271,47 +284,21 @@ static void keyCallback(GLFWwindow * window, int key, int scancode, int action, 
     }
 }
 
-static bool setupSimDisplay() {
-    // Setup display shader
-    s_texProg = std::make_shared<Program>();
-    s_texProg->setVerbose(true);
-    s_texProg->setShaderNames(s_resourceDir + "/shaders/tex.vert", s_resourceDir + "/shaders/tex.frag");
-    if (!s_texProg->init()) {
-        std::cerr << "Failed to initialize texture shader" << std::endl;
+
+static bool setupLocalShader(const std::string & resourcesDir) {
+    std::string shadersDir(resourcesDir + "/shaders");
+
+    s_phongProg = std::make_shared<Program>();
+    s_phongProg->setVerbose(true);
+    s_phongProg->setShaderNames(shadersDir + "/foil.vert", shadersDir + "/foil.frag");
+    if (!s_phongProg->init()) {
+        std::cerr << "Failed to initialize foil shader" << std::endl;
         return false;
     }
-    s_texProg->addUniform("u_tex");
-    glUseProgram(s_texProg->pid);
-    glUniform1i(s_texProg->getUniform("u_tex"), 0);
-    glUseProgram(0);
-
-    // Setup display geometry
-
-    glGenBuffers(1, &s_screenVBO);
-    glBindBuffer(GL_ARRAY_BUFFER, s_screenVBO);
-
-    vec2 vertData[]{
-        { -1.0f, -1.0f },
-        { 1.0f, -1.0f },
-        { 1.0f,  1.0f },
-
-        { 1.0f,  1.0f },
-        { -1.0f,  1.0f },
-        { -1.0f, -1.0f }
-    };
-    glBufferData(GL_ARRAY_BUFFER, 2 * 3 * sizeof(vec2), vertData, GL_STATIC_DRAW);
-
-    glGenVertexArrays(1, &s_screenVAO);
-    glBindVertexArray(s_screenVAO);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
-    glBindVertexArray(0);
-
-    if (glGetError() != GL_NO_ERROR) {
-        std::cerr << "OpenGL error" << std::endl;
-        return false;
-    }
-
+    s_phongProg->addUniform("u_projMat");
+    s_phongProg->addUniform("u_viewMat");
+    s_phongProg->addUniform("u_modelMat");
+    s_phongProg->addUniform("u_normalMat");
     return true;
 }
 
@@ -327,7 +314,7 @@ static bool setup() {
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
-    if (!(s_mainWindow = glfwCreateWindow(Simulation::size().x * 2, Simulation::size().y, "Simulation", nullptr, nullptr))) {
+    if (!(s_mainWindow = glfwCreateWindow(k_width, k_height, "FlightSim", nullptr, nullptr))) {
         std::cerr << "Failed to create window" << std::endl;
         return false;
     }
@@ -341,11 +328,6 @@ static bool setup() {
     // Setup GLAD
     if (!gladLoadGL()) {
         std::cerr << "Failed to initialize GLAD" << std::endl;
-        return false;
-    }
-
-    if (!setupSimDisplay()) {
-        std::cerr << "Failed to setup simulation display" << std::endl;
         return false;
     }
 
@@ -366,6 +348,7 @@ static bool setup() {
         return false;
     }
 
+    setupLocalShader(s_resourceDir);
 
     glfwMakeContextCurrent(s_mainWindow);
     glfwFocusWindow(s_mainWindow);
@@ -379,56 +362,16 @@ static void cleanup() {
 }
 
 static void update() {
-    if (s_shouldStep || s_shouldSweep) {
-        if (Simulation::slice() == 0) { // About to do first slice
-            setSimulation(s_angleOfAttack, true);
-        }
-
-        if (Simulation::step()) { // That was the last slice
-            s_shouldSweep = false;
-            vec3 lift(Simulation::lift());
-            vec3 drag(Simulation::drag());
-            std::cout << "angle: " << s_angleOfAttack << ", lift: " << lift.y << ", drag: " << drag.y << std::endl;
-
-
-            if (s_shouldAutoProgress) {
-                s_angleOfAttack += k_autoAngleIncrement;
-                s_angleOfAttack = std::fmod(s_angleOfAttack - k_minAngleOfAttack, k_maxAngleOfAttack - k_minAngleOfAttack) + k_minAngleOfAttack;
-                s_shouldSweep = true;
-            }
-        }
-
-        s_shouldStep = false;
-    }
+    doFastSweep(s_angleOfAttack);
 }
 
-static void renderDisplay() {
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    s_texProg->bind();
-    glBindVertexArray(s_screenVAO);
-    glActiveTexture(GL_TEXTURE0);
-
-    // Front
-    glViewport(0, 0, Simulation::size().x, Simulation::size().y);
-    glBindTexture(GL_TEXTURE_2D, Simulation::frontTex());
-    glDrawArrays(GL_TRIANGLES, 0, 6);
-
-    // Side
-    glViewport(Simulation::size().x, 0, Simulation::size().x, Simulation::size().y);
-    glBindTexture(GL_TEXTURE_2D, Simulation::sideTex());
-    glDrawArrays(GL_TRIANGLES, 0, 6);
-
-    glBindVertexArray(0);
-    s_texProg->unbind();
-}
 
 static void render() {
-    renderDisplay();
-    glfwSwapBuffers(s_mainWindow);
+    s_phongProg->bind();
+    s_model->draw(mat4(1), mat4(1), s_phongProg->getUniform("u_modelMat"), s_phongProg->getUniform("u_normalMat"));
+    s_phongProg->unbind();
+    //glfwSwapBuffers(s_mainWindow);
 
-    //SideView::render();
-    //glfwMakeContextCurrent(s_mainWindow);
 
     glfwMakeContextCurrent(s_mainWindow);
 }

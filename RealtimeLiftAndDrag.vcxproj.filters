@@ -126,5 +126,11 @@
     <None Include="resources\shaders\tex.vert">
       <Filter>Resource Files\shaders</Filter>
     </None>
+    <None Include="resources\shaders\phong.frag">
+      <Filter>Resource Files\shaders</Filter>
+    </None>
+    <None Include="resources\shaders\phong.vert">
+      <Filter>Resource Files\shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>
