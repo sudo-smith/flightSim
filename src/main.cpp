@@ -36,7 +36,7 @@ enum class SimModel { airfoil, f18, sphere };
 
 
 
-static constexpr SimModel k_simModel(SimModel::airfoil);
+static constexpr SimModel k_simModel(SimModel::f18);
 
 static const std::string k_defResourceDir("resources");
 
@@ -179,15 +179,13 @@ static void doFastSweep(float angleOfAttack) {
 
     vec3 lift(Simulation::lift());
     vec3 drag(Simulation::drag());
-    Results::submit(angleOfAttack, lift.y, drag.y);
-
+    
     std::cout << "Angle: " << angleOfAttack << ", Lift: " << lift.y << ", Drag: " << drag.y << ", SPS: " << (1.0 / dt) << std::endl;
 }
 
 static void doAllAngles() {
     for (float angle(k_minAngleOfAttack); angle <= k_maxAngleOfAttack; angle += k_angleOfAttackIncrement) {
         doFastSweep(angle);
-        Results::render();
         glfwMakeContextCurrent(s_mainWindow);
     }
 }
@@ -392,7 +390,6 @@ static void update() {
             vec3 drag(Simulation::drag());
             std::cout << "angle: " << s_angleOfAttack << ", lift: " << lift.y << ", drag: " << drag.y << std::endl;
 
-            Results::submit(s_angleOfAttack, lift.y, drag.y);
 
             if (s_shouldAutoProgress) {
                 s_angleOfAttack += k_autoAngleIncrement;
@@ -433,7 +430,6 @@ static void render() {
     //SideView::render();
     //glfwMakeContextCurrent(s_mainWindow);
 
-    Results::render();
     glfwMakeContextCurrent(s_mainWindow);
 }
 
