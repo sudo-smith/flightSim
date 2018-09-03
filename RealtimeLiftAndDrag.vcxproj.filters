@@ -47,6 +47,9 @@
     <ClCompile Include="src\GRLLoader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\WindowManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\GLSL.h">
@@ -74,6 +77,9 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="src\GRLLoader.hpp">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\WindowManager.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>

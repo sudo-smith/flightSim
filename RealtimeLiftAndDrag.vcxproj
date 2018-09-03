@@ -148,6 +148,7 @@
     <ClCompile Include="src\stb_image.cpp" />
     <ClCompile Include="src\Text.cpp" />
     <ClCompile Include="src\tiny_obj_loader.cpp" />
+    <ClCompile Include="src\WindowManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Global.hpp" />
@@ -159,6 +160,7 @@
     <ClInclude Include="src\Simulation.hpp" />
     <ClInclude Include="src\Text.hpp" />
     <ClInclude Include="src\Util.hpp" />
+    <ClInclude Include="src\WindowManager.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="resources\shaders\phong.frag" />

@@ -28,6 +28,7 @@ extern "C" {
 #include "Simulation.hpp"
 #include "Model.hpp"
 #include "Program.h"
+#include "WindowManager.h"
 
 
 
@@ -57,8 +58,11 @@ static std::shared_ptr<Program> s_phongProg;
 static std::unique_ptr<Model> s_model;
 static mat4 s_modelMat;
 static mat3 s_normalMat;
-static vec3 s_centerOfMass; // Center of mass of the model in world space
-
+static vec3 s_centerOfGravity; // Center of gravity of the model in world space
+static vec3 s_vel;
+static vec3 s_pos;
+static vec3 s_lift;
+static vec3 s_drag;
 
 //all in degrees
 static float s_angleOfAttack(0.0f);
@@ -66,6 +70,7 @@ static float s_aileronAngle(0.0f);
 static float s_rudderAngle(0.0f);
 static float s_elevatorAngle(0.0f);
 
+WindowManager *windowManager = nullptr;
 static GLFWwindow * s_mainWindow;
 static bool s_shouldStep(false);
 static bool s_shouldSweep(true);
@@ -136,10 +141,10 @@ static void changeElevatorAngle(float deltaAngle) {
     std::cout << "Elevator angle set to " << s_elevatorAngle << std::endl;
 }
 
-static void set(const mat4 & modelMat, const mat3 & normalMat, const vec3 & centerOfMass) {
+static void set(const mat4 & modelMat, const mat3 & normalMat, const vec3 & centerOfGravity) {
     s_modelMat = modelMat;
     s_normalMat = normalMat;
-    s_centerOfMass = centerOfMass;
+    s_centerOfGravity = centerOfGravity;
 }
 
 static void setSimulation(float angleOfAttack, bool debug) {
@@ -180,6 +185,7 @@ static void setSimulation(float angleOfAttack, bool debug) {
     }
 
     Simulation::set(*s_model, modelMat, normalMat, depth, centerOfGravity, debug);
+    set(modelMat, normalMat, centerOfGravity);
 }
 
 static void doFastSweep(float angleOfAttack) {
@@ -188,11 +194,10 @@ static void doFastSweep(float angleOfAttack) {
     double then(glfwGetTime());
     Simulation::sweep();
     double dt(glfwGetTime() - then);
-
-    vec3 lift(Simulation::lift());
-    vec3 drag(Simulation::drag());
+    s_lift = Simulation::lift();
+    s_drag = Simulation::drag();
     
-    std::cout << "Angle: " << angleOfAttack << ", Lift: " << lift.y << ", Drag: " << drag.y << ", SPS: " << (1.0 / dt) << std::endl;
+    std::cout << "Angle: " << angleOfAttack << ", Lift: " << s_lift.y << ", Drag: " << s_drag.y << ", SPS: " << (1.0 / dt) << std::endl;
 }
 
 static void doAllAngles() {
@@ -289,7 +294,7 @@ static bool setupLocalShader(const std::string & resourcesDir) {
 
     s_phongProg = std::make_shared<Program>();
     s_phongProg->setVerbose(true);
-    s_phongProg->setShaderNames(shadersDir + "/foil.vert", shadersDir + "/foil.frag");
+    s_phongProg->setShaderNames(shadersDir + "/phong.vert", shadersDir + "/phong.frag");
     if (!s_phongProg->init()) {
         std::cerr << "Failed to initialize foil shader" << std::endl;
         return false;
@@ -355,6 +360,8 @@ static bool setup() {
     return true;
 }
 
+
+
 static void cleanup() {
     Simulation::cleanup();
     glfwTerminate();
@@ -362,17 +369,56 @@ static void cleanup() {
 
 static void update() {
     doFastSweep(s_angleOfAttack);
+    vec3 cumForce = s_lift + s_drag;
+    vec3 acc = cumForce / 1.0f; //replace 1 with mass of model (i.e. f18)
+    s_vel += acc;
+
 }
 
+static mat4 getPerspectiveMatrix() {
+    mat4 P;
+    float fov(3.14159f / 4.0f);
+    float aspect;
+    if (k_width < k_height) {
+        aspect = float(k_height) / float(k_width);
+    }
+    else {
+        aspect = float(k_width) / float(k_height);
+    }
+
+    return glm::perspective(fov, aspect, 0.01f, 1000.f);
+}
+
+static mat4 getViewMatrix() {
+    mat4 V;
+    V = glm::lookAt(
+        vec3(0, 0.5, -3),
+        vec3(0, 0, 0),
+        vec3(0, 1, 0)
+    );
+    return V;
+}
 
 static void render() {
-    s_phongProg->bind();
-    s_model->draw(mat4(1), mat4(1), s_phongProg->getUniform("u_modelMat"), s_phongProg->getUniform("u_normalMat"));
+
+    glViewport(0, 0, k_width, k_height);
+    glClearColor(0.3f, 0.7f, 0.8f, 1.0f);
+
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    mat4 M, N, V, P;
+    //todo rigth now s_model mat is translated some distance back in the set simulation
+    M = s_modelMat;// glm::translate(s_modelMat, vec3(0, 0, 0));
+    N = glm::transpose(glm::inverse(M));
+    P = getPerspectiveMatrix();
+    V = getViewMatrix();
+    s_phongProg->bind(); 
+    glUniformMatrix4fv(s_phongProg->getUniform("u_projMat"), 1, GL_FALSE, reinterpret_cast<const float *>(&P));
+    glUniformMatrix4fv(s_phongProg->getUniform("u_viewMat"), 1, GL_FALSE, reinterpret_cast<const float *>(&V));
+    s_model->draw(M, N, s_phongProg->getUniform("u_modelMat"), s_phongProg->getUniform("u_normalMat"));
     s_phongProg->unbind();
-    //glfwSwapBuffers(s_mainWindow);
+    glfwSwapBuffers(s_mainWindow);
 
-
-    glfwMakeContextCurrent(s_mainWindow);
+    //glfwMakeContextCurrent(s_mainWindow);
 }
 
 

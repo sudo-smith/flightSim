@@ -294,7 +294,7 @@ namespace Simulation {
 
         uint drawBuffers[]{ GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
         glDrawBuffers(3, drawBuffers); // TODO: can this be moved to fbo setup?
-
+        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
         // Clear framebuffer.
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 

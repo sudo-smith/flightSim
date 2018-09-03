@@ -23,9 +23,11 @@ uniform mat4 u_viewMat;
 // Functions --------------------------------------------------------------------
 
 void main() {
-    gl_Position = u_projMat * u_viewMat * u_modelMat * vec4(in_pos, 1.0);
-    out_pos = vec4(u_viewMat * u_modelMat * vec4(in_pos, 1.0)).xyz;
-    out_norm = vec4(u_viewMat * u_modelMat * vec4(in_norm, 0.0)).xyz;
+    out_pos = (u_viewMat * u_modelMat * (vec4(in_pos, 1.0f))).xyz;
+    out_norm = u_normalMat * in_norm;
     out_texCoord = in_texCoord;
     out_lightPos = vec3(u_viewMat * vec4(100, 100, 100, 1));
+
+    gl_Position = u_projMat * vec4(out_pos, 1.0f);
+
 }
