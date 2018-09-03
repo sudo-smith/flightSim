@@ -1,4 +1,4 @@
-﻿// Realtime Lift and Drag SURP 2018
+// Realtime Lift and Drag SURP 2018
 // Christian Eckhart, William Newey, Austin Quick, Sebastian Seibert
 
 
@@ -26,7 +26,6 @@ extern "C" {
 #include "glm/gtc/matrix_transform.hpp"
 
 #include "Simulation.hpp"
-#include "SideView.hpp"
 #include "Model.hpp"
 #include "Program.h"
 
