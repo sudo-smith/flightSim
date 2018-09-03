@@ -196,8 +196,12 @@ static void doFastSweep(float angleOfAttack) {
     double dt(glfwGetTime() - then);
     s_lift = Simulation::lift();
     s_drag = Simulation::drag();
-    
-    std::cout << "Angle: " << angleOfAttack << ", Lift: " << s_lift.y << ", Drag: " << s_drag.y << ", SPS: " << (1.0 / dt) << std::endl;
+    printf("Angle: %f, Lift: (%f, %f, %f), Drag (%f, %f, %f), SPS: %f\n",
+        angleOfAttack,
+        s_lift.x, s_lift.y, s_lift.z,
+        s_drag.x, s_drag.y, s_drag.z,
+        (1.0 / dt)
+    );
 }
 
 static void doAllAngles() {
@@ -346,6 +350,9 @@ static bool setup() {
         return false;
     }
 
+    s_pos = vec3(0);
+    s_vel = vec3(0);
+    
     // Setup simulation
     if (!Simulation::setup(s_resourceDir)) {
         std::cerr << "Failed to setup simulation" << std::endl;
@@ -369,9 +376,10 @@ static void cleanup() {
 
 static void update() {
     doFastSweep(s_angleOfAttack);
-    vec3 cumForce = s_lift + s_drag;
-    vec3 acc = cumForce / 1.0f; //replace 1 with mass of model (i.e. f18)
+    vec3 cumForce = -s_lift;// + s_drag;
+    vec3 acc = cumForce / 10000.0f; //replace 1 with mass of model (i.e. f18)
     s_vel += acc;
+    s_pos += s_vel;
 
 }
 
@@ -390,13 +398,17 @@ static mat4 getPerspectiveMatrix() {
 }
 
 static mat4 getViewMatrix() {
-    mat4 V;
-    V = glm::lookAt(
-        vec3(0, 0.5, -3),
-        vec3(0, 0, 0),
-        vec3(0, 1, 0)
+    vec3 modelMatPos = vec3(s_modelMat[3][0], s_modelMat[3][1], s_modelMat[3][2]);
+    vec3 camPos = vec3(0, 0.5, -5.5);
+    vec3 lookPos = modelMatPos + s_pos;
+    vec3 viewVec = lookPos - camPos;
+    vec3 right = glm::cross(viewVec, vec3(0, 1, 0));
+    vec3 up = glm::cross(right, viewVec);
+    return glm::lookAt(
+        camPos,
+        lookPos,
+        up
     );
-    return V;
 }
 
 static void render() {
@@ -407,7 +419,7 @@ static void render() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     mat4 M, N, V, P;
     //todo rigth now s_model mat is translated some distance back in the set simulation
-    M = s_modelMat;// glm::translate(s_modelMat, vec3(0, 0, 0));
+    M = glm::translate(s_modelMat, s_pos);
     N = glm::transpose(glm::inverse(M));
     P = getPerspectiveMatrix();
     V = getViewMatrix();
